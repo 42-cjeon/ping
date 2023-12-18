@@ -1,0 +1,13 @@
+Language: Cpp
+ColumnLimit: 80
+BasedOnStyle: LLVM
+Standard: c++17
+TabWidth: 8
+IndentWidth: 8
+UseTab: Always
+AllowShortBlocksOnASingleLine: false
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: None
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+

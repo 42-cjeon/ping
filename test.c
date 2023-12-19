@@ -18,7 +18,6 @@
 #include <sys/epoll.h>
 #include <sys/timerfd.h>
 
-#define STRICT(expr) do { if ((expr) < 0) err(1, "ping (line=%d): " #expr, __LINE__); } while (0)
 
 static volatile sig_atomic_t should_send_packet;
 

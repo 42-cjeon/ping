@@ -3,74 +3,9 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
-typedef struct {
-	enum {
-		DEST_UNINIT,
-		DEST_IPV4,
-		DEST_DOMAIN,
-	} type;
-	union {
-		uint32_t ipv4;
-		char *domain;
-	};
-} Destination;
-
-typedef struct {
-	Destination dest;
-	uint32_t size;
-	uint32_t interval;
-	uint32_t linger;
-	uint32_t count;
-	uint32_t timeout;
-	bool verbose;
-	bool usage;
-} PingConfig;
-
-typedef enum {
-	OPT_INTERVAL = 'i',
-	OPT_COUNT = 'c',
-	OPT_LINGER = 'W',
-	OPT_TIMEOUT = 'w',
-	OPT_SIZE = 's',
-	OPT_USAGE = '?',
-	OPT_VERBOSE = 'v',
-} PingOpt;
-
-typedef enum {
-	PS_OPT_OR_ADDR,
-	PS_ARG_INTERVAL,
-	PS_ARG_COUNT,
-	PS_ARG_LINGER,
-	PS_ARG_TIMEOUT,
-	PS_ARG_SIZE,
-} ParserState;
-
-typedef enum {
-	PR_OK,
-	PR_INVALID_VALUE,
-	PR_TOO_BIG,
-	PR_MISSING_HOST,
-	PR_INVALID_IPV4_HOST,
-	PR_UNKNOWN_HOST,
-	PR_INVALID_OPTION,
-	PR_MISSING_ARGUMENT,
-} ParseResult;
-
-typedef struct {
-	const char *arg;
-	union {
-		const char *where;
-		uint32_t limit;
-	};
-} ParseError;
-
-typedef struct {
-	ParserState state;
-	PingConfig *conf;
-	ParseError err;
-	char **argp;
-} ArgParser;
+#include "ping.h"
 
 bool _is_digit(char ch) {
 	return ('0' <= ch && ch <= '9');
@@ -125,17 +60,21 @@ ParseResult parse_arg_timeout(ArgParser *parser) {
 
 ParseResult parse_arg_size(ArgParser *parser) {
 	parser->state = PS_OPT_OR_ADDR;
-	return parse_uint(*parser->argp, 65535 - 8, &parser->conf->size,
+	return parse_uint(*parser->argp, 60000, &parser->conf->size,
 			  &parser->err);
 }
 
 ParseResult parse_ipv4_address(char *str, ArgParser *parser) {
 	parser->conf->dest.type = DEST_IPV4;
 
-	if (inet_pton(AF_INET, str, &parser->conf->dest.ipv4) != 1) {
+	memset(&parser->conf->dest.ipv4, 0, sizeof(struct sockaddr_in));
+
+	if (inet_pton(AF_INET, str, &parser->conf->dest.ipv4.sin_addr.s_addr) != 1) {
 		parser->err.arg = str;
 		return PR_INVALID_IPV4_HOST;
 	}
+
+	parser->conf->dest.ipv4.sin_family = AF_INET;
 
 	return PR_OK;
 }
@@ -277,7 +216,7 @@ void ping_conf_print(PingConfig *self) {
 		printf("  dest: uninit\n");
 		break;
 	case DEST_IPV4:
-		printf("  dest: IPV4(0x%08x)\n", self->dest.ipv4);
+		printf("  dest: IPV4(0x%08x)\n", self->dest.ipv4.sin_addr.s_addr);
 		break;
 	case DEST_DOMAIN:
 		printf("  dest: DOMAIN(%s)\n", self->dest.domain);
